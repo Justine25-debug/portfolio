@@ -340,7 +340,7 @@ const Hero: React.FC = () => {
             {showEaster && (
               <img
                 src={easterGif}
-                alt="Easter"
+                alt=""
                 className="pointer-events-none absolute inset-0 m-auto h-100 w-100 object-contain drop-shadow-lg"
               />
             )}
