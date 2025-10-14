@@ -81,7 +81,7 @@ const Header: React.FC<HeaderProps> = ({ isDark = false }) => {
             aria-expanded={open}
             aria-controls="mobile-menu"
             onClick={() => setOpen((v) => !v)}
-            className={`inline-flex items-center justify-center rounded-md p-2 ${isDark ? 'text-slate-300 hover:bg-slate-800' : 'text-slate-700 hover:bg-slate-100'} focus:outline-none focus-visible:ring-2 ${isDark ? 'focus-visible:ring-slate-600' : 'focus-visible:ring-slate-400'}`}
+            className={`inline-flex items-center justify-center rounded-md p-2 ${isDark ? 'text-white' : 'text-black'}`}
           >
             <RxHamburgerMenu className="h-6 w-6" />
           </button>
