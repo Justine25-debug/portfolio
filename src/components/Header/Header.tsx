@@ -27,13 +27,17 @@ const Header: React.FC = () => {
   return (
     <header className="bg-white text-slate-900 w-full">
       <div ref={wrapRef} className="px-6 py-4 flex items-center justify-between relative">
-        <h1 className="text-lg font-semibold tracking-tight">Justine25-debug</h1>
+        <h1 className="text-lg font-semibold tracking-tight">
+          <a href="#/" className="hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 rounded">
+            Justine25-debug
+          </a>
+        </h1>
 
         {/* Desktop nav */}
         <nav className="hidden md:flex items-center space-x-6" aria-label="Main navigation">
           <a className="text-slate-600 hover:text-slate-900 transition-colors" href="#about">About</a>
           <a className="text-slate-600 hover:text-slate-900 transition-colors" href="#projects">Projects</a>
-          <a className="text-slate-600 hover:text-slate-900 transition-colors" href="#contact">Contact</a>
+          <a className="text-slate-600 hover:text-slate-900 transition-colors" href="#/contact">Contact</a>
         </nav>
 
         {/* Mobile hamburger */}
@@ -75,7 +79,7 @@ const Header: React.FC = () => {
               Projects
             </a>
             <a
-              href="#contact"
+              href="#/contact"
               role="menuitem"
               className="block px-4 py-2 text-slate-700 hover:bg-slate-50"
               onClick={() => setOpen(false)}

@@ -3,6 +3,7 @@ import './App.css'
 import Header from './components/Header/Header'
 import Hero from './components/Hero/Hero'
 import Loader from './components/Loader/Loader'
+import Contact from './components/Contact/Contact'
 import faviconGif from './assets/3dgifmaker69336.gif'
 
 function App() {
@@ -74,6 +75,22 @@ function App() {
     return undefined
   }, [showLoader])
 
+  // Simple hash-based router (no dependency). Supports "#/contact".
+  const [route, setRoute] = useState<string>(() => {
+    if (typeof window === 'undefined') return '/'
+    const h = window.location.hash.replace(/^#/, '') || '/'
+    return h
+  })
+
+  useEffect(() => {
+    const onHash = () => {
+      const h = window.location.hash.replace(/^#/, '') || '/'
+      setRoute(h)
+    }
+    window.addEventListener('hashchange', onHash)
+    return () => window.removeEventListener('hashchange', onHash)
+  }, [])
+
   return (
     <>
       {showLoader && <Loader isFadingOut={isFadingOut} />}
@@ -83,7 +100,7 @@ function App() {
         }`}
       >
         <Header />
-        <Hero />
+        {route === '/contact' ? <Contact /> : <Hero />}
       </div>
     </>
   )
