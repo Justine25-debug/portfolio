@@ -93,11 +93,8 @@ const Header: React.FC<HeaderProps> = ({ isDark = false }) => {
             id="mobile-menu"
             role="menu"
             aria-label="Mobile navigation"
-            className={`absolute right-6 top-full mt-2 w-48 rounded-lg border ${isDark ? 'border-slate-700 bg-black' : 'border-slate-200 bg-white'} shadow-lg z-50 overflow-hidden`}
+            className={`absolute right-6 top-full mt-2 w-48 rounded-lg border ${isDark ? 'border-white bg-black' : 'border-slate-200 bg-white'} shadow-lg z-50 overflow-hidden`}
           >
-            <Link to="/about" role="menuitem" className={`block px-4 py-2 ${isDark ? 'text-slate-200 hover:bg-slate-800' : 'text-slate-700 hover:bg-slate-50'}`} onClick={() => setOpen(false)}>
-              About
-            </Link>
             <Link to="/projects" role="menuitem" className={`block px-4 py-2 ${isDark ? 'text-slate-200 hover:bg-slate-800' : 'text-slate-700 hover:bg-slate-50'}`} onClick={() => setOpen(false)}>
               Projects
             </Link>
