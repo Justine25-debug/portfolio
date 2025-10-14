@@ -1,11 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { RxHamburgerMenu } from 'react-icons/rx'
+import { Link, NavLink } from 'react-router-dom'
 
 const Header: React.FC = () => {
   const [open, setOpen] = useState(false)
   const wrapRef = useRef<HTMLDivElement | null>(null)
 
-  // Close on outside click / Escape
   useEffect(() => {
     const onDocClick = (e: MouseEvent) => {
       if (!open) return
@@ -28,19 +28,19 @@ const Header: React.FC = () => {
     <header className="bg-white text-slate-900 w-full">
       <div ref={wrapRef} className="px-6 py-4 flex items-center justify-between relative">
         <h1 className="text-lg font-semibold tracking-tight">
-          <a href="#/" className="hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 rounded">
+          <Link to="/" className="hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 rounded">
             Justine25-debug
-          </a>
+          </Link>
         </h1>
 
-        {/* Desktop nav */}
+        {/* navigation */}
         <nav className="hidden md:flex items-center space-x-6" aria-label="Main navigation">
-          <a className="text-slate-600 hover:text-slate-900 transition-colors" href="#about">About</a>
-          <a className="text-slate-600 hover:text-slate-900 transition-colors" href="#projects">Projects</a>
-          <a className="text-slate-600 hover:text-slate-900 transition-colors" href="#/contact">Contact</a>
+          <NavLink className={({ isActive }) => `transition-colors ${isActive ? 'text-slate-900' : 'text-slate-600 hover:text-slate-900'}`} to="/about">About</NavLink>
+          <NavLink className={({ isActive }) => `transition-colors ${isActive ? 'text-slate-900' : 'text-slate-600 hover:text-slate-900'}`} to="/projects">Projects</NavLink>
+          <NavLink className={({ isActive }) => `transition-colors ${isActive ? 'text-slate-900' : 'text-slate-600 hover:text-slate-900'}`} to="/contact">Contact</NavLink>
         </nav>
 
-        {/* Mobile hamburger */}
+        {/* mobile hamburger */}
         <div className="md:hidden">
           <button
             type="button"
@@ -54,7 +54,7 @@ const Header: React.FC = () => {
           </button>
         </div>
 
-        {/* Mobile dropdown */}
+        {/* mobile dropdown */}
         {open && (
           <div
             id="mobile-menu"
@@ -62,30 +62,15 @@ const Header: React.FC = () => {
             aria-label="Mobile navigation"
             className="absolute right-6 top-full mt-2 w-48 rounded-lg border border-slate-200 bg-white shadow-lg z-50 overflow-hidden"
           >
-            <a
-              href="#about"
-              role="menuitem"
-              className="block px-4 py-2 text-slate-700 hover:bg-slate-50"
-              onClick={() => setOpen(false)}
-            >
+            <Link to="/about" role="menuitem" className="block px-4 py-2 text-slate-700 hover:bg-slate-50" onClick={() => setOpen(false)}>
               About
-            </a>
-            <a
-              href="#projects"
-              role="menuitem"
-              className="block px-4 py-2 text-slate-700 hover:bg-slate-50"
-              onClick={() => setOpen(false)}
-            >
+            </Link>
+            <Link to="/projects" role="menuitem" className="block px-4 py-2 text-slate-700 hover:bg-slate-50" onClick={() => setOpen(false)}>
               Projects
-            </a>
-            <a
-              href="#/contact"
-              role="menuitem"
-              className="block px-4 py-2 text-slate-700 hover:bg-slate-50"
-              onClick={() => setOpen(false)}
-            >
+            </Link>
+            <Link to="/contact" role="menuitem" className="block px-4 py-2 text-slate-700 hover:bg-slate-50" onClick={() => setOpen(false)}>
               Contact
-            </a>
+            </Link>
           </div>
         )}
       </div>

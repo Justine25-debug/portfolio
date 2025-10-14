@@ -5,6 +5,9 @@ import Hero from './components/Hero/Hero'
 import Loader from './components/Loader/Loader'
 import Contact from './components/Contact/Contact'
 import faviconGif from './assets/3dgifmaker69336.gif'
+import { Routes, Route } from 'react-router-dom'
+import About from './components/About.tsx'
+import Projects from './components/Projects.tsx'
 
 function App() {
   const [showLoader, setShowLoader] = useState(true)
@@ -50,7 +53,6 @@ function App() {
     }
   }, [])
 
-  // Set favicon to GIF (works in dev and build via Vite asset handling)
   useEffect(() => {
     if (typeof document === 'undefined') return
     const existing = document.querySelector<HTMLLinkElement>("link[rel~='icon']")
@@ -75,21 +77,7 @@ function App() {
     return undefined
   }, [showLoader])
 
-  // Simple hash-based router (no dependency). Supports "#/contact".
-  const [route, setRoute] = useState<string>(() => {
-    if (typeof window === 'undefined') return '/'
-    const h = window.location.hash.replace(/^#/, '') || '/'
-    return h
-  })
-
-  useEffect(() => {
-    const onHash = () => {
-      const h = window.location.hash.replace(/^#/, '') || '/'
-      setRoute(h)
-    }
-    window.addEventListener('hashchange', onHash)
-    return () => window.removeEventListener('hashchange', onHash)
-  }, [])
+  // Routing is handled by React Router via BrowserRouter in main.tsx
 
   return (
     <>
@@ -100,7 +88,14 @@ function App() {
         }`}
       >
         <Header />
-        {route === '/contact' ? <Contact /> : <Hero />}
+        <Routes>
+          <Route path="/" element={<Hero />} />
+          <Route path="/about" element={<About />} />
+          <Route path="/projects" element={<Projects />} />
+          <Route path="/contact" element={<Contact />} />
+          {/* Fallback to home for unknown paths */}
+          <Route path="*" element={<Hero />} />
+        </Routes>
       </div>
     </>
   )

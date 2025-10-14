@@ -10,22 +10,19 @@ type ModelProps = {
   mouse: { x: number; y: number }
   spinRef: React.MutableRefObject<{ x: number; y: number }>
   draggingRef: React.MutableRefObject<boolean>
-  // Increments whenever a click bounce should trigger
   bounceTick: number
-  // Increments when tab becomes visible again to reset state/reframe
-  resumeTick: number
-  // When true (mobile), ignore pointer input and gently auto-spin the model
-  autoSpin: boolean
+  resumeTick: number // tab resume tick to reset state
+  autoSpin: boolean // mobile: ignore pointer input and auto-spin
 }
 
-const SCALE_MULTIPLIER = 2 // tweak this for size
+const SCALE_MULTIPLIER = 2 // overall model scale
 
 function Model({ mouse, spinRef, draggingRef, bounceTick, resumeTick, autoSpin }: ModelProps) {
   const gltf = useLoader(GLTFLoader, modelUrl)
   const group = useRef<THREE.Group>(null!)
   const { camera } = useThree()
 
-  // Compute bounding box center + scale
+  // Compute bounding box center and scale
   const { center, scaleFactor } = useMemo(() => {
     const box = new THREE.Box3().setFromObject(gltf.scene)
     const size = new THREE.Vector3()
@@ -38,27 +35,26 @@ function Model({ mouse, spinRef, draggingRef, bounceTick, resumeTick, autoSpin }
     return { center: c, scaleFactor: scale }
   }, [gltf.scene])
 
-  // Rotation / movement state
+  // Rotation/translation state
   const baseRot = useRef({ x: 0, y: 0 })
   const spinOffset = useRef({ x: 0, y: 0 })
   const lastActiveRef = useRef<number>(performance.now())
   const resettingRef = useRef(false)
   const targetPos = useRef({ x: 0, y: 0 })
-  // Bounce physics state
+  // Bounce physics
   const bounce = useRef({ y: 0, v: 0 })
   const didMountRef = useRef(false)
 
-  // Apply an impulse when bounceTick changes (ignore first mount)
+  // Impulse when bounceTick changes (ignore first mount)
   useEffect(() => {
     if (!didMountRef.current) {
       didMountRef.current = true
       return
     }
-    // Impulse for a satisfying bounce
     bounce.current.v += 5
   }, [bounceTick])
 
-  // Mouse controls rotation target (disabled on mobile auto-spin)
+  // Mouse controls rotation target (disabled on auto-spin)
   useEffect(() => {
     if (autoSpin) return
     baseRot.current.y = THREE.MathUtils.degToRad(20) * mouse.x
@@ -69,22 +65,22 @@ function Model({ mouse, spinRef, draggingRef, bounceTick, resumeTick, autoSpin }
 
   // Animate rotation, spin, and reset
   useFrame((_state, delta) => {
-    // Clamp delta to avoid giant steps after tab switch/background
+    // Clamp delta to avoid large steps after tab switch/background
     const dt = Math.min(delta, 0.05)
     if (!group.current) return
     const g = group.current
     const frictionBase = 0.92
     const friction = Math.pow(frictionBase, 60 * dt)
 
-    // If on mobile, drive a gentle auto-spin and neutralize interactive inputs
+    // Auto-spin on mobile and relax interactive inputs
     if (autoSpin) {
-      // Slowly spin around Y and smoothly relax X tilt and positional offsets
-      const spinSpeed = 0.6 // radians/sec; tweak for taste
+      // Slow spin around Y; relax X tilt and positional offsets
+      const spinSpeed = 0.6 // radians/sec
       baseRot.current.y += spinSpeed * dt
       baseRot.current.x = THREE.MathUtils.lerp(baseRot.current.x, 0, 1 - Math.pow(0.0001, dt))
       targetPos.current.x = THREE.MathUtils.lerp(targetPos.current.x, 0, 1 - Math.pow(0.0001, dt))
       targetPos.current.y = THREE.MathUtils.lerp(targetPos.current.y, 0, 1 - Math.pow(0.0001, dt))
-      // Prevent any interaction residuals from affecting rotation
+      // Neutralize interaction residuals
       draggingRef.current = false
       spinRef.current.x = 0
       spinRef.current.y = 0
@@ -94,7 +90,7 @@ function Model({ mouse, spinRef, draggingRef, bounceTick, resumeTick, autoSpin }
     spinRef.current.x *= friction
     spinRef.current.y *= friction
 
-  const speed = Math.hypot(spinRef.current.x, spinRef.current.y)
+    const speed = Math.hypot(spinRef.current.x, spinRef.current.y)
     const active = draggingRef.current || speed > 0.0002
     const now = performance.now()
 
@@ -116,14 +112,14 @@ function Model({ mouse, spinRef, draggingRef, bounceTick, resumeTick, autoSpin }
       }
     }
 
-  const desiredY = baseRot.current.y + spinOffset.current.y
-  const desiredX = baseRot.current.x + spinOffset.current.x
+    const desiredY = baseRot.current.y + spinOffset.current.y
+    const desiredX = baseRot.current.x + spinOffset.current.x
     g.rotation.y = THREE.MathUtils.lerp(g.rotation.y, desiredY, 1 - Math.pow(0.0001, dt))
     g.rotation.x = THREE.MathUtils.lerp(g.rotation.x, desiredX, 1 - Math.pow(0.0001, dt))
     g.position.x = THREE.MathUtils.lerp(g.position.x, targetPos.current.x, 1 - Math.pow(0.0001, dt))
     g.position.y = THREE.MathUtils.lerp(g.position.y, targetPos.current.y, 1 - Math.pow(0.0001, dt))
 
-    // Update bounce spring (simple damped oscillator)
+    // Bounce spring (simple damped oscillator)
     const k = 40 // stiffness
     const c = 6 // damping
     const b = bounce.current
@@ -131,7 +127,7 @@ function Model({ mouse, spinRef, draggingRef, bounceTick, resumeTick, autoSpin }
     b.v += a * dt
     b.y += b.v * dt
 
-    // Apply bounce to scale (uniform) and a slight additional Y offset
+    // Apply bounce to scale and slight Y offset
     const baseScale = scaleFactor * SCALE_MULTIPLIER
     const scaleBoost = 1 + Math.max(0, b.y) * 0.22
     g.scale.set(baseScale * scaleBoost, baseScale * scaleBoost, baseScale * scaleBoost)
@@ -140,7 +136,7 @@ function Model({ mouse, spinRef, draggingRef, bounceTick, resumeTick, autoSpin }
 
   const cloned = useMemo(() => gltf.scene.clone(true), [gltf.scene])
 
-  // ✅ Correct camera framing logic
+  // Camera framing
   useEffect(() => {
     const box = new THREE.Box3().setFromObject(gltf.scene)
     const sphere = new THREE.Sphere()
@@ -157,7 +153,7 @@ function Model({ mouse, spinRef, draggingRef, bounceTick, resumeTick, autoSpin }
     persp.updateProjectionMatrix()
   }, [camera, gltf.scene, scaleFactor, resumeTick])
 
-  // Reset physics on resume to avoid NaNs or extreme values after tab switch
+  // Reset physics on resume
   useEffect(() => {
     bounce.current = { y: 0, v: 0 }
     spinOffset.current = { x: 0, y: 0 }
@@ -165,7 +161,7 @@ function Model({ mouse, spinRef, draggingRef, bounceTick, resumeTick, autoSpin }
     lastActiveRef.current = performance.now()
   }, [resumeTick])
 
-  // ✅ Center pivot properly
+  // Center pivot
   return (
     <group
       ref={group}
@@ -205,7 +201,7 @@ const Hero: React.FC = () => {
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const [autoSpin, setAutoSpin] = useState(false)
 
-  // Prepare the explosion sound
+  // Preload explosion sound
   useEffect(() => {
     if (typeof window === 'undefined') return
     const audio = new Audio(explosionSfx)
@@ -213,7 +209,7 @@ const Hero: React.FC = () => {
     audioRef.current = audio
   }, [])
 
-  // Play sound whenever the GIF becomes visible
+  // Play sound when GIF is shown
   useEffect(() => {
     if (!showEaster) return
     const a = audioRef.current
@@ -223,12 +219,12 @@ const Hero: React.FC = () => {
         a.volume = 0.9
         void a.play()
       } catch {
-        // ignore play errors (e.g., autoplay policies)
+        // Ignore play errors (e.g., autoplay policies)
       }
     }
   }, [showEaster])
 
-  // Detect mobile / touch devices or small screens to enable auto-spin and disable drag/mouse control
+  // Enable auto-spin on coarse pointers or small screens
   useEffect(() => {
     if (typeof window === 'undefined' || typeof window.matchMedia === 'undefined') return
     const mqCoarse = window.matchMedia('(pointer: coarse)')
@@ -283,7 +279,7 @@ const Hero: React.FC = () => {
     }
   }, [autoSpin])
 
-  // When returning to the tab, reframe and reset internal physics state
+  // On tab visibility return, reframe and reset physics
   useEffect(() => {
     const onVis = () => {
       if (document.visibilityState === 'visible') {
@@ -314,13 +310,13 @@ const Hero: React.FC = () => {
               draggingRef.current = true
               lastRef.current = { x: e.clientX, y: e.clientY }
             }}
-            className="relative h-[420px] sm:h-[480px] md:h-[560px] lg:h-[640px] select-none"
+            className="relative w-full md:w-[720px] lg:w-[700px] h-[420px] sm:h-[480px] md:h-[560px] lg:h-[640px] select-none"
           >
             <Canvas
               camera={{ position: [0, 0, 4], fov: 45, near: 0.1, far: 100 }}
               dpr={[1, 2]}
               onCreated={({ gl }) => {
-                // Prevent default so WebGL context can be restored automatically
+                // Keep WebGL context restorable
                 gl.domElement.addEventListener('webglcontextlost', (e) => {
                   e.preventDefault()
                 })
@@ -336,7 +332,7 @@ const Hero: React.FC = () => {
                 autoSpin={autoSpin}
               />
             </Canvas>
-            {/* Easter egg overlay */}
+            {/* Easter egg */}
             {showEaster && (
               <img
                 src={easterGif}
@@ -344,15 +340,15 @@ const Hero: React.FC = () => {
                 className="pointer-events-none absolute inset-0 m-auto h-100 w-100 object-contain drop-shadow-lg"
               />
             )}
-            {/* Click catcher for triple-press detection */}
+            {/* Invisible click overlay (triple-press toggles gif) */}
             <button
               type="button"
               aria-label="hidden-trigger"
               onClick={() => {
-                // Trigger a bounce on single click
+                // Bounce on single click
                 setBounceTick((n) => n + 1)
                 const now = performance.now()
-                // Keep only clicks in the last 800ms
+                // Keep clicks in the last 800ms
                 clickTimesRef.current = clickTimesRef.current.filter((t) => now - t < 800)
                 clickTimesRef.current.push(now)
                 if (clickTimesRef.current.length >= 3) {
