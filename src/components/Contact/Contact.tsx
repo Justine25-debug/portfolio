@@ -62,7 +62,7 @@ const Contact: React.FC = () => {
           Feel free to send me whatever shenanigans you want!
         </p>
 
-        {/* Bitwarden suppressed; standard field names for Web3Forms */}
+        {/*Password manager autofill suppressed; standard field names for Web3Forms */}
         <form
           onSubmit={handleSubmit}
           noValidate
