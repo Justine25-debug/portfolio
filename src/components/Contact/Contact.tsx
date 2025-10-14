@@ -1,6 +1,10 @@
 import React, { useMemo, useState } from 'react'
 
-const Contact: React.FC = () => {
+type ContactProps = {
+  isDark?: boolean
+}
+
+const Contact: React.FC<ContactProps> = ({ isDark = false }) => {
   // Minimal controlled state for validation and UX
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
@@ -55,10 +59,10 @@ const Contact: React.FC = () => {
   }
 
   return (
-    <section id="contact" className="w-full bg-white">
+    <section id="contact" className={`w-full ${isDark ? 'bg-black' : 'bg-white'}`}>
       <div className="max-w-3xl mx-auto px-6 py-16 md:py-24">
         <h2 className="text-3xl md:text-4xl font-semibold tracking-tight mb-6">Contact me</h2>
-        <p className="text-slate-600 mb-10">
+        <p className={`${isDark ? 'text-slate-300' : 'text-slate-600'} mb-10`}>
           Feel free to send me whatever shenanigans you want!
         </p>
 
@@ -71,7 +75,7 @@ const Contact: React.FC = () => {
           className="space-y-6"
         >
           <div>
-            <label htmlFor="name" className="block text-sm font-medium text-slate-800 mb-2">
+            <label htmlFor="name" className={`block text-sm font-medium mb-2 ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>
               Name
             </label>
             <input
@@ -81,7 +85,7 @@ const Contact: React.FC = () => {
               autoComplete="off"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full rounded-lg border border-slate-300 px-4 py-2.5 outline-none focus:ring-2 focus:ring-slate-400"
+              className={`w-full rounded-lg border border-slate-300 px-4 py-2.5 outline-none focus:ring-2 focus:ring-slate-400 ${isDark ? 'text-white placeholder:text-slate-300' : 'text-slate-900 placeholder:text-slate-400'}`}
               placeholder="Your name"
               required
               data-bwignore="true"
@@ -89,7 +93,7 @@ const Contact: React.FC = () => {
           </div>
 
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-slate-800 mb-2">
+            <label htmlFor="email" className={`block text-sm font-medium mb-2 ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>
               Email
             </label>
             <input
@@ -99,7 +103,7 @@ const Contact: React.FC = () => {
               autoComplete="off"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full rounded-lg border border-slate-300 px-4 py-2.5 outline-none focus:ring-2 focus:ring-slate-400"
+              className={`w-full rounded-lg border border-slate-300 px-4 py-2.5 outline-none focus:ring-2 focus:ring-slate-400 ${isDark ? 'text-white placeholder:text-slate-300' : 'text-slate-900 placeholder:text-slate-400'}`}
               placeholder="you@example.com"
               required
               data-bwignore="true"
@@ -107,7 +111,7 @@ const Contact: React.FC = () => {
           </div>
 
           <div>
-            <label htmlFor="message" className="block text-sm font-medium text-slate-800 mb-2">
+            <label htmlFor="message" className={`block text-sm font-medium mb-2 ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>
               Message
             </label>
             <textarea
@@ -116,7 +120,7 @@ const Contact: React.FC = () => {
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               rows={6}
-              className="w-full rounded-lg border border-slate-300 px-4 py-2.5 outline-none focus:ring-2 focus:ring-slate-400 resize-none"
+              className={`w-full rounded-lg border border-slate-300 px-4 py-2.5 outline-none focus:ring-2 focus:ring-slate-400 resize-none ${isDark ? 'text-white placeholder:text-slate-300' : 'text-slate-900 placeholder:text-slate-400'}`}
               placeholder="Say hello!"
               required
               autoComplete="off"
@@ -132,7 +136,7 @@ const Contact: React.FC = () => {
             >
               {submitting ? 'Sending...' : 'Send message'}
             </button>
-            {result && <span className="text-sm text-slate-600">{result}</span>}
+            {result && <span className={`text-sm ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>{result}</span>}
           </div>
         </form>
       </div>

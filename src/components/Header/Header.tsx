@@ -2,7 +2,11 @@ import React, { useEffect, useRef, useState } from 'react'
 import { RxHamburgerMenu } from 'react-icons/rx'
 import { Link, NavLink } from 'react-router-dom'
 
-const Header: React.FC = () => {
+type HeaderProps = {
+  isDark?: boolean
+}
+
+const Header: React.FC<HeaderProps> = ({ isDark = false }) => {
   const [open, setOpen] = useState(false)
   const wrapRef = useRef<HTMLDivElement | null>(null)
 
@@ -25,19 +29,48 @@ const Header: React.FC = () => {
   }, [open])
 
   return (
-    <header className="bg-white text-slate-900 w-full">
+    <header className={`${isDark ? 'bg-black text-white' : 'bg-white text-slate-900'} w-full`}>
       <div ref={wrapRef} className="px-6 py-4 flex items-center justify-between relative">
         <h1 className="text-lg font-semibold tracking-tight">
-          <Link to="/" className="hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 rounded">
+          <Link to="/" className={`hover:opacity-90 focus:outline-none focus-visible:ring-2 ${isDark ? 'focus-visible:ring-slate-600' : 'focus-visible:ring-slate-400'} rounded`}>
             Justine25-debug
           </Link>
         </h1>
 
         {/* navigation */}
         <nav className="hidden md:flex items-center space-x-6" aria-label="Main navigation">
-          <NavLink className={({ isActive }) => `transition-colors ${isActive ? 'text-slate-900' : 'text-slate-600 hover:text-slate-900'}`} to="/about">About</NavLink>
-          <NavLink className={({ isActive }) => `transition-colors ${isActive ? 'text-slate-900' : 'text-slate-600 hover:text-slate-900'}`} to="/projects">Projects</NavLink>
-          <NavLink className={({ isActive }) => `transition-colors ${isActive ? 'text-slate-900' : 'text-slate-600 hover:text-slate-900'}`} to="/contact">Contact</NavLink>
+          <NavLink
+            className={({ isActive }) =>
+              `${
+                isDark
+                  ? isActive
+                    ? 'text-white'
+                    : 'text-slate-300 hover:text-white'
+                  : isActive
+                    ? 'text-slate-900'
+                    : 'text-slate-600 hover:text-slate-900'
+              }`
+            }
+            to="/projects"
+          >
+            Projects
+          </NavLink>
+          <NavLink
+            className={({ isActive }) =>
+              `${
+                isDark
+                  ? isActive
+                    ? 'text-white'
+                    : 'text-slate-300 hover:text-white'
+                  : isActive
+                    ? 'text-slate-900'
+                    : 'text-slate-600 hover:text-slate-900'
+              }`
+            }
+            to="/contact"
+          >
+            Contact
+          </NavLink>
         </nav>
 
         {/* mobile hamburger */}
@@ -48,7 +81,7 @@ const Header: React.FC = () => {
             aria-expanded={open}
             aria-controls="mobile-menu"
             onClick={() => setOpen((v) => !v)}
-            className="inline-flex items-center justify-center rounded-md p-2 text-slate-700 hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
+            className={`inline-flex items-center justify-center rounded-md p-2 ${isDark ? 'text-slate-300 hover:bg-slate-800' : 'text-slate-700 hover:bg-slate-100'} focus:outline-none focus-visible:ring-2 ${isDark ? 'focus-visible:ring-slate-600' : 'focus-visible:ring-slate-400'}`}
           >
             <RxHamburgerMenu className="h-6 w-6" />
           </button>
@@ -60,15 +93,15 @@ const Header: React.FC = () => {
             id="mobile-menu"
             role="menu"
             aria-label="Mobile navigation"
-            className="absolute right-6 top-full mt-2 w-48 rounded-lg border border-slate-200 bg-white shadow-lg z-50 overflow-hidden"
+            className={`absolute right-6 top-full mt-2 w-48 rounded-lg border ${isDark ? 'border-slate-700 bg-black' : 'border-slate-200 bg-white'} shadow-lg z-50 overflow-hidden`}
           >
-            <Link to="/about" role="menuitem" className="block px-4 py-2 text-slate-700 hover:bg-slate-50" onClick={() => setOpen(false)}>
+            <Link to="/about" role="menuitem" className={`block px-4 py-2 ${isDark ? 'text-slate-200 hover:bg-slate-800' : 'text-slate-700 hover:bg-slate-50'}`} onClick={() => setOpen(false)}>
               About
             </Link>
-            <Link to="/projects" role="menuitem" className="block px-4 py-2 text-slate-700 hover:bg-slate-50" onClick={() => setOpen(false)}>
+            <Link to="/projects" role="menuitem" className={`block px-4 py-2 ${isDark ? 'text-slate-200 hover:bg-slate-800' : 'text-slate-700 hover:bg-slate-50'}`} onClick={() => setOpen(false)}>
               Projects
             </Link>
-            <Link to="/contact" role="menuitem" className="block px-4 py-2 text-slate-700 hover:bg-slate-50" onClick={() => setOpen(false)}>
+            <Link to="/contact" role="menuitem" className={`block px-4 py-2 ${isDark ? 'text-slate-200 hover:bg-slate-800' : 'text-slate-700 hover:bg-slate-50'}`} onClick={() => setOpen(false)}>
               Contact
             </Link>
           </div>

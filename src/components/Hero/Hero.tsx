@@ -188,7 +188,11 @@ const Lights: React.FC = () => {
   )
 }
 
-const Hero: React.FC = () => {
+type HeroProps = {
+  isDark?: boolean
+}
+
+const Hero: React.FC<HeroProps> = ({ isDark = false }) => {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const [mouse, setMouse] = useState({ x: 0, y: 0 })
   const spinRef = useRef({ x: 0, y: 0 })
@@ -291,7 +295,7 @@ const Hero: React.FC = () => {
   }, [])
 
   return (
-    <section className="w-full bg-white">
+    <section className={`w-full ${isDark ? 'bg-black text-white' : 'bg-white text-black'}`}>
       <div className="max-w-6xl mx-auto px-6 py-16 md:py-24">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
           <div>

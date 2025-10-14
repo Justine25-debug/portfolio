@@ -6,13 +6,22 @@ import Loader from './components/Loader/Loader'
 import Contact from './components/Contact/Contact'
 import icongif from './assets/icon.gif'
 import { Routes, Route } from 'react-router-dom'
-import About from './components/About.tsx'
-import Projects from './components/Projects.tsx'
+import Projects from './components/Projects/Projects.tsx'
+import Footer from './components/Footer/Footer'
 
 function App() {
   const [showLoader, setShowLoader] = useState(true)
   const [isFadingOut, setIsFadingOut] = useState(false)
   const [isHeaderVisible, setIsHeaderVisible] = useState(false)
+  const [isDark, setIsDark] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false
+    try {
+      const stored = window.localStorage.getItem('theme:isDark')
+      return stored === 'true'
+    } catch {
+      return false
+    }
+  })
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -77,24 +86,50 @@ function App() {
     return undefined
   }, [showLoader])
 
+  // Prevent page scroll while loader is visible
+  useEffect(() => {
+    if (typeof document === 'undefined') return
+    const body = document.body
+    if (showLoader) {
+      body.classList.add('overflow-hidden')
+    } else {
+      body.classList.remove('overflow-hidden')
+    }
+    return () => {
+      body.classList.remove('overflow-hidden')
+    }
+  }, [showLoader])
+
+  // persist theme
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    try {
+      window.localStorage.setItem('theme:isDark', String(isDark))
+    } catch {
+      // ignore persistence errors (e.g., privacy mode)
+    }
+  }, [isDark])
+
 
   return (
     <>
-      {showLoader && <Loader isFadingOut={isFadingOut} />}
-      <div
-        className={`transition-all duration-700 ease-out transform ${
-          isHeaderVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
-        }`}
-      >
-        <Header />
-        <Routes>
-          <Route path="/" element={<Hero />} />
-          <Route path="/about" element={<About />} />
-          <Route path="/projects" element={<Projects />} />
-          <Route path="/contact" element={<Contact />} />
-          <Route path="*" element={<Hero />} />
-        </Routes>
+      {showLoader && <Loader isFadingOut={isFadingOut} isDark={isDark} />}
+      <div className={`min-h-screen ${isDark ? 'bg-black text-white' : 'bg-white text-black'}`}>
+        <div
+          className={`transition-[opacity,transform] duration-700 ease-out transform ${
+            isHeaderVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+          }`}
+        >
+          <Header isDark={isDark} />
+          <Routes>
+            <Route path="/" element={<Hero isDark={isDark} />} />
+            <Route path="/projects" element={<Projects isDark={isDark} />} />
+            <Route path="/contact" element={<Contact isDark={isDark} />} />
+            <Route path="*" element={<Hero isDark={isDark} />} />
+          </Routes>
+        </div>
       </div>
+      <Footer isDark={isDark} onToggle={() => setIsDark((v) => !v)} />
     </>
   )
 }

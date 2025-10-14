@@ -3,12 +3,13 @@ import loaderGif from '../../assets/fullbody-icon.gif'
 
 type LoaderProps = {
   isFadingOut?: boolean
+  isDark?: boolean
 }
 
-const Loader: React.FC<LoaderProps> = ({ isFadingOut = false }) => {
+const Loader: React.FC<LoaderProps> = ({ isFadingOut = false, isDark = false }) => {
   return (
     <div
-      className={`fixed inset-0 flex items-center justify-center bg-white z-50 transition-opacity duration-500 ${isFadingOut ? 'opacity-0' : 'opacity-100'}`}
+      className={`fixed inset-0 flex items-center justify-center overflow-hidden ${isDark ? 'bg-black' : 'bg-white'} z-50 transition-opacity duration-500 ${isFadingOut ? 'opacity-0' : 'opacity-100'}`}
     >
       <img
         src={loaderGif}
