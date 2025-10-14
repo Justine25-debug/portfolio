@@ -14,11 +14,13 @@ type ModelProps = {
   bounceTick: number
   // Increments when tab becomes visible again to reset state/reframe
   resumeTick: number
+  // When true (mobile), ignore pointer input and gently auto-spin the model
+  autoSpin: boolean
 }
 
 const SCALE_MULTIPLIER = 2 // tweak this for size
 
-function Model({ mouse, spinRef, draggingRef, bounceTick, resumeTick }: ModelProps) {
+function Model({ mouse, spinRef, draggingRef, bounceTick, resumeTick, autoSpin }: ModelProps) {
   const gltf = useLoader(GLTFLoader, modelUrl)
   const group = useRef<THREE.Group>(null!)
   const { camera } = useThree()
@@ -56,13 +58,14 @@ function Model({ mouse, spinRef, draggingRef, bounceTick, resumeTick }: ModelPro
     bounce.current.v += 5
   }, [bounceTick])
 
-  // Mouse controls rotation target
+  // Mouse controls rotation target (disabled on mobile auto-spin)
   useEffect(() => {
+    if (autoSpin) return
     baseRot.current.y = THREE.MathUtils.degToRad(20) * mouse.x
     baseRot.current.x = THREE.MathUtils.degToRad(10) * mouse.y
     targetPos.current.x = 0.1 * mouse.x
     targetPos.current.y = 0.05 * mouse.y
-  }, [mouse.x, mouse.y])
+  }, [mouse.x, mouse.y, autoSpin])
 
   // Animate rotation, spin, and reset
   useFrame((_state, delta) => {
@@ -72,12 +75,26 @@ function Model({ mouse, spinRef, draggingRef, bounceTick, resumeTick }: ModelPro
     const g = group.current
     const frictionBase = 0.92
     const friction = Math.pow(frictionBase, 60 * dt)
+
+    // If on mobile, drive a gentle auto-spin and neutralize interactive inputs
+    if (autoSpin) {
+      // Slowly spin around Y and smoothly relax X tilt and positional offsets
+      const spinSpeed = 0.6 // radians/sec; tweak for taste
+      baseRot.current.y += spinSpeed * dt
+      baseRot.current.x = THREE.MathUtils.lerp(baseRot.current.x, 0, 1 - Math.pow(0.0001, dt))
+      targetPos.current.x = THREE.MathUtils.lerp(targetPos.current.x, 0, 1 - Math.pow(0.0001, dt))
+      targetPos.current.y = THREE.MathUtils.lerp(targetPos.current.y, 0, 1 - Math.pow(0.0001, dt))
+      // Prevent any interaction residuals from affecting rotation
+      draggingRef.current = false
+      spinRef.current.x = 0
+      spinRef.current.y = 0
+    }
     spinOffset.current.x += spinRef.current.x
     spinOffset.current.y += spinRef.current.y
     spinRef.current.x *= friction
     spinRef.current.y *= friction
 
-    const speed = Math.hypot(spinRef.current.x, spinRef.current.y)
+  const speed = Math.hypot(spinRef.current.x, spinRef.current.y)
     const active = draggingRef.current || speed > 0.0002
     const now = performance.now()
 
@@ -99,8 +116,8 @@ function Model({ mouse, spinRef, draggingRef, bounceTick, resumeTick }: ModelPro
       }
     }
 
-    const desiredY = baseRot.current.y + spinOffset.current.y
-    const desiredX = baseRot.current.x + spinOffset.current.x
+  const desiredY = baseRot.current.y + spinOffset.current.y
+  const desiredX = baseRot.current.x + spinOffset.current.x
     g.rotation.y = THREE.MathUtils.lerp(g.rotation.y, desiredY, 1 - Math.pow(0.0001, dt))
     g.rotation.x = THREE.MathUtils.lerp(g.rotation.x, desiredX, 1 - Math.pow(0.0001, dt))
     g.position.x = THREE.MathUtils.lerp(g.position.x, targetPos.current.x, 1 - Math.pow(0.0001, dt))
@@ -186,6 +203,7 @@ const Hero: React.FC = () => {
   const [bounceTick, setBounceTick] = useState(0)
   const [resumeTick, setResumeTick] = useState(0)
   const audioRef = useRef<HTMLAudioElement | null>(null)
+  const [autoSpin, setAutoSpin] = useState(false)
 
   // Prepare the explosion sound
   useEffect(() => {
@@ -210,8 +228,23 @@ const Hero: React.FC = () => {
     }
   }, [showEaster])
 
+  // Detect mobile / touch devices or small screens to enable auto-spin and disable drag/mouse control
   useEffect(() => {
-    if (typeof window === 'undefined') return
+    if (typeof window === 'undefined' || typeof window.matchMedia === 'undefined') return
+    const mqCoarse = window.matchMedia('(pointer: coarse)')
+    const mqSmall = window.matchMedia('(max-width: 768px)')
+    const update = () => setAutoSpin(mqCoarse.matches || mqSmall.matches)
+    update()
+    mqCoarse.addEventListener('change', update)
+    mqSmall.addEventListener('change', update)
+    return () => {
+      mqCoarse.removeEventListener('change', update)
+      mqSmall.removeEventListener('change', update)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || autoSpin) return
     const handleMove = (e: MouseEvent) => {
       const x = (e.clientX / window.innerWidth) * 2 - 1
       const y = (e.clientY / window.innerHeight) * 2 - 1
@@ -224,10 +257,10 @@ const Hero: React.FC = () => {
       window.removeEventListener('mousemove', handleMove)
       window.removeEventListener('mouseleave', handleLeave)
     }
-  }, [])
+  }, [autoSpin])
 
   useEffect(() => {
-    if (typeof window === 'undefined') return
+    if (typeof window === 'undefined' || autoSpin) return
     const onMove = (e: PointerEvent) => {
       if (!draggingRef.current) return
       const dx = e.clientX - lastRef.current.x
@@ -248,7 +281,7 @@ const Hero: React.FC = () => {
       window.removeEventListener('pointerup', endDrag)
       window.removeEventListener('pointercancel', endDrag)
     }
-  }, [])
+  }, [autoSpin])
 
   // When returning to the tab, reframe and reset internal physics state
   useEffect(() => {
@@ -277,6 +310,7 @@ const Hero: React.FC = () => {
           <div
             ref={containerRef}
             onPointerDown={(e) => {
+              if (autoSpin) return
               draggingRef.current = true
               lastRef.current = { x: e.clientX, y: e.clientY }
             }}
@@ -299,6 +333,7 @@ const Hero: React.FC = () => {
                 draggingRef={draggingRef}
                 bounceTick={bounceTick}
                 resumeTick={resumeTick}
+                autoSpin={autoSpin}
               />
             </Canvas>
             {/* Easter egg overlay */}
