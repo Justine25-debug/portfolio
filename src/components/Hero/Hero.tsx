@@ -2,9 +2,9 @@ import React, { useMemo, useRef, useState, useEffect } from 'react'
 import { Canvas, useFrame, useLoader, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
-import modelUrl from '../../assets/Untitled.glb'
-import easterGif from '../../assets/200w.gif'
-import explosionSfx from '../../assets/explosion-42132.mp3'
+import iconModel from '../../assets/icon.glb'
+import explosionGif from '../../assets/explosion.gif'
+import explosionSfx from '../../assets/explosion.mp3'
 
 type ModelProps = {
   mouse: { x: number; y: number }
@@ -18,7 +18,7 @@ type ModelProps = {
 const SCALE_MULTIPLIER = 2 // overall model scale
 
 function Model({ mouse, spinRef, draggingRef, bounceTick, resumeTick, autoSpin }: ModelProps) {
-  const gltf = useLoader(GLTFLoader, modelUrl)
+  const gltf = useLoader(GLTFLoader, iconModel)
   const group = useRef<THREE.Group>(null!)
   const { camera } = useThree()
 
@@ -335,7 +335,7 @@ const Hero: React.FC = () => {
             {/* Easter egg */}
             {showEaster && (
               <img
-                src={easterGif}
+                src={explosionGif}
                 alt=""
                 className="pointer-events-none absolute inset-0 m-auto h-100 w-100 object-contain drop-shadow-lg"
               />

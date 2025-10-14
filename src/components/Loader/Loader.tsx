@@ -1,5 +1,5 @@
 import React from 'react'
-import loaderGif from '../../assets/bitmap-justine25debug.gif'
+import loaderGif from '../../assets/fullbody-icon.gif'
 
 type LoaderProps = {
   isFadingOut?: boolean

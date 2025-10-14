@@ -4,7 +4,7 @@ import Header from './components/Header/Header'
 import Hero from './components/Hero/Hero'
 import Loader from './components/Loader/Loader'
 import Contact from './components/Contact/Contact'
-import faviconGif from './assets/3dgifmaker69336.gif'
+import icongif from './assets/icon.gif'
 import { Routes, Route } from 'react-router-dom'
 import About from './components/About.tsx'
 import Projects from './components/Projects.tsx'
@@ -58,12 +58,12 @@ function App() {
     const existing = document.querySelector<HTMLLinkElement>("link[rel~='icon']")
     if (existing) {
       existing.type = 'image/gif'
-      existing.href = faviconGif
+      existing.href = icongif
     } else {
       const link = document.createElement('link')
       link.rel = 'icon'
       link.type = 'image/gif'
-      link.href = faviconGif
+      link.href = icongif
       document.head.appendChild(link)
     }
   }, [])
@@ -77,7 +77,6 @@ function App() {
     return undefined
   }, [showLoader])
 
-  // Routing is handled by React Router via BrowserRouter in main.tsx
 
   return (
     <>
@@ -93,7 +92,6 @@ function App() {
           <Route path="/about" element={<About />} />
           <Route path="/projects" element={<Projects />} />
           <Route path="/contact" element={<Contact />} />
-          {/* Fallback to home for unknown paths */}
           <Route path="*" element={<Hero />} />
         </Routes>
       </div>
