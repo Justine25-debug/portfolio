@@ -1,0 +1,31 @@
+.site-header {
+  background: linear-gradient(90deg, #0f172a, #1e293b);
+  color: #fff;
+  padding: 0.75rem 0;
+}
+
+.site-header .container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+.site-title {
+  font-size: 1.125rem;
+  margin: 0;
+}
+
+.site-nav a {
+  color: rgba(255, 255, 255, 0.85);
+  margin-left: 1rem;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.site-nav a:hover {
+  color: #fff;
+  text-decoration: underline;
+}
