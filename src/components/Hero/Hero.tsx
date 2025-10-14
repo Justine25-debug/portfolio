@@ -12,11 +12,13 @@ type ModelProps = {
   draggingRef: React.MutableRefObject<boolean>
   // Increments whenever a click bounce should trigger
   bounceTick: number
+  // Increments when tab becomes visible again to reset state/reframe
+  resumeTick: number
 }
 
 const SCALE_MULTIPLIER = 2 // tweak this for size
 
-function Model({ mouse, spinRef, draggingRef, bounceTick }: ModelProps) {
+function Model({ mouse, spinRef, draggingRef, bounceTick, resumeTick }: ModelProps) {
   const gltf = useLoader(GLTFLoader, modelUrl)
   const group = useRef<THREE.Group>(null!)
   const { camera } = useThree()
@@ -64,10 +66,12 @@ function Model({ mouse, spinRef, draggingRef, bounceTick }: ModelProps) {
 
   // Animate rotation, spin, and reset
   useFrame((_state, delta) => {
+    // Clamp delta to avoid giant steps after tab switch/background
+    const dt = Math.min(delta, 0.05)
     if (!group.current) return
     const g = group.current
     const frictionBase = 0.92
-    const friction = Math.pow(frictionBase, 60 * delta)
+    const friction = Math.pow(frictionBase, 60 * dt)
     spinOffset.current.x += spinRef.current.x
     spinOffset.current.y += spinRef.current.y
     spinRef.current.x *= friction
@@ -85,7 +89,7 @@ function Model({ mouse, spinRef, draggingRef, bounceTick }: ModelProps) {
     }
 
     if (resettingRef.current) {
-      const resetEase = 1 - Math.pow(0.01, 60 * delta)
+      const resetEase = 1 - Math.pow(0.01, 60 * dt)
       spinOffset.current.x = THREE.MathUtils.lerp(spinOffset.current.x, 0, resetEase)
       spinOffset.current.y = THREE.MathUtils.lerp(spinOffset.current.y, 0, resetEase)
       if (Math.abs(spinOffset.current.x) < 1e-4 && Math.abs(spinOffset.current.y) < 1e-4) {
@@ -97,18 +101,18 @@ function Model({ mouse, spinRef, draggingRef, bounceTick }: ModelProps) {
 
     const desiredY = baseRot.current.y + spinOffset.current.y
     const desiredX = baseRot.current.x + spinOffset.current.x
-    g.rotation.y = THREE.MathUtils.lerp(g.rotation.y, desiredY, 1 - Math.pow(0.0001, delta))
-    g.rotation.x = THREE.MathUtils.lerp(g.rotation.x, desiredX, 1 - Math.pow(0.0001, delta))
-    g.position.x = THREE.MathUtils.lerp(g.position.x, targetPos.current.x, 1 - Math.pow(0.0001, delta))
-    g.position.y = THREE.MathUtils.lerp(g.position.y, targetPos.current.y, 1 - Math.pow(0.0001, delta))
+    g.rotation.y = THREE.MathUtils.lerp(g.rotation.y, desiredY, 1 - Math.pow(0.0001, dt))
+    g.rotation.x = THREE.MathUtils.lerp(g.rotation.x, desiredX, 1 - Math.pow(0.0001, dt))
+    g.position.x = THREE.MathUtils.lerp(g.position.x, targetPos.current.x, 1 - Math.pow(0.0001, dt))
+    g.position.y = THREE.MathUtils.lerp(g.position.y, targetPos.current.y, 1 - Math.pow(0.0001, dt))
 
     // Update bounce spring (simple damped oscillator)
     const k = 40 // stiffness
     const c = 6 // damping
     const b = bounce.current
     const a = -k * b.y - c * b.v
-    b.v += a * delta
-    b.y += b.v * delta
+    b.v += a * dt
+    b.y += b.v * dt
 
     // Apply bounce to scale (uniform) and a slight additional Y offset
     const baseScale = scaleFactor * SCALE_MULTIPLIER
@@ -134,7 +138,15 @@ function Model({ mouse, spinRef, draggingRef, bounceTick }: ModelProps) {
     persp.near = distance / 100
     persp.far = distance * 10
     persp.updateProjectionMatrix()
-  }, [camera, gltf.scene, scaleFactor])
+  }, [camera, gltf.scene, scaleFactor, resumeTick])
+
+  // Reset physics on resume to avoid NaNs or extreme values after tab switch
+  useEffect(() => {
+    bounce.current = { y: 0, v: 0 }
+    spinOffset.current = { x: 0, y: 0 }
+    resettingRef.current = false
+    lastActiveRef.current = performance.now()
+  }, [resumeTick])
 
   // ✅ Center pivot properly
   return (
@@ -172,6 +184,7 @@ const Hero: React.FC = () => {
   const [showEaster, setShowEaster] = useState(false)
   const clickTimesRef = useRef<number[]>([])
   const [bounceTick, setBounceTick] = useState(0)
+  const [resumeTick, setResumeTick] = useState(0)
   const audioRef = useRef<HTMLAudioElement | null>(null)
 
   // Prepare the explosion sound
@@ -237,6 +250,17 @@ const Hero: React.FC = () => {
     }
   }, [])
 
+  // When returning to the tab, reframe and reset internal physics state
+  useEffect(() => {
+    const onVis = () => {
+      if (document.visibilityState === 'visible') {
+        setResumeTick((t) => t + 1)
+      }
+    }
+    document.addEventListener('visibilitychange', onVis)
+    return () => document.removeEventListener('visibilitychange', onVis)
+  }, [])
+
   return (
     <section className="w-full bg-white">
       <div className="max-w-6xl mx-auto px-6 py-16 md:py-24">
@@ -261,9 +285,21 @@ const Hero: React.FC = () => {
             <Canvas
               camera={{ position: [0, 0, 4], fov: 45, near: 0.1, far: 100 }}
               dpr={[1, 2]}
+              onCreated={({ gl }) => {
+                // Prevent default so WebGL context can be restored automatically
+                gl.domElement.addEventListener('webglcontextlost', (e) => {
+                  e.preventDefault()
+                })
+              }}
             >
               <Lights />
-              <Model mouse={mouse} spinRef={spinRef} draggingRef={draggingRef} bounceTick={bounceTick} />
+              <Model
+                mouse={mouse}
+                spinRef={spinRef}
+                draggingRef={draggingRef}
+                bounceTick={bounceTick}
+                resumeTick={resumeTick}
+              />
             </Canvas>
             {/* Easter egg overlay */}
             {showEaster && (
