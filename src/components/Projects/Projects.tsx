@@ -85,15 +85,26 @@ function DarknessModel({ onLoaded }: { onLoaded?: () => void }) {
 
   // Configure GLTFLoader to rewrite dependent URLs (scene.bin, textures/*.png) to their emitted URLs
   const gltf = useLoader(GLTFLoader, toUrl('scene.gltf'), (loader) => {
-    loader.manager.setURLModifier((url) => {
-      // If it's already absolute (http/https/data), leave it; otherwise map relative to our folder
+    const mapDependentUrl = (raw: string) => {
+      // Try to normalize to a pathname and match the tail we care about
       try {
-        new URL(url)
-        return url
+        const u = new URL(raw, typeof window !== 'undefined' ? window.location.origin : 'http://localhost')
+        const path = u.pathname.replace(/\\/g, '/')
+        const m = path.match(/(?:^|\/)(scene\.bin|textures\/[^/]+)$/i)
+        if (m && m[1]) {
+          const mapped = toUrl(m[1])
+          if (mapped) return mapped
+        }
       } catch {
-        return toUrl(url)
+        // raw could be relative like 'scene.bin' or 'textures/foo.png'
+        const rel = raw.replace(/^\.?\//, '')
+        const mapped = toUrl(rel)
+        if (mapped) return mapped
       }
-    })
+      return raw
+    }
+
+    loader.manager.setURLModifier((url) => mapDependentUrl(url))
   })
 
   // Improve texture clarity at oblique angles (e.g., ground/grass) with anisotropic filtering

@@ -5,6 +5,6 @@ import tailwindcss from '@tailwindcss/vite'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react(), tailwindcss()],
-  assetsInclude: ['**/*.glb', '**/*.fbx'],
+  assetsInclude: ['**/*.glb', '**/*.fbx', '**/*.gltf', '**/*.bin', '**/*.png'],
   base: "/portfolio/",
 })
