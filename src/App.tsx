@@ -5,11 +5,14 @@ import Hero from './components/Hero/Hero'
 import Loader from './components/Loader/Loader'
 import Contact from './components/Contact/Contact'
 import icongif from './assets/icon.gif'
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, useLocation } from 'react-router-dom'
 import Projects from './components/Projects/Projects.tsx'
 import Footer from './components/Footer/Footer'
+// Preload heavy 3D assets early to smooth route transition into Projects
+import './preload/darkness'
 
 function App() {
+  const location = useLocation()
   const [showLoader, setShowLoader] = useState(true)
   const [isFadingOut, setIsFadingOut] = useState(false)
   const [isHeaderVisible, setIsHeaderVisible] = useState(false)
@@ -129,7 +132,10 @@ function App() {
           </Routes>
         </div>
       </div>
-      <Footer isDark={isDark} onToggle={() => setIsDark((v) => !v)} />
+      {/* Show theme toggle only on the home tab */}
+      {location.pathname === '/' && (
+        <Footer isDark={isDark} onToggle={() => setIsDark((v) => !v)} />
+      )}
     </>
   )
 }

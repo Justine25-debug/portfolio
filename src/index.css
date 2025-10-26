@@ -13,11 +13,28 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Ensure the app fills the viewport and disable scrolling */
+html, body, #root {
+  height: 100dvh;
+}
+
 body {
   margin: 0;
-  min-height: 100vh;
+  height: 100dvh;
+  min-height: 100dvh;
+  overflow: hidden;
+  overscroll-behavior: none;
   background-color: #ffffff;
 }
+
+/* Hide scrollbars cross-browser (defensive even though overflow is hidden) */
+/* Firefox */
+html, body { scrollbar-width: none; }
+/* IE/Edge legacy */
+body { -ms-overflow-style: none; }
+/* WebKit */
+html::-webkit-scrollbar,
+body::-webkit-scrollbar { width: 0; height: 0; }
 
 a {
   color: inherit;
@@ -26,4 +43,17 @@ a {
 
 a:hover {
   text-decoration: underline;
+}
+
+/* Endless horizontal marquee animation for menu */
+@keyframes marquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+/* Respect reduced motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  .animate-\[marquee_var\(--duration\)_linear_infinite\] {
+    animation: none !important;
+  }
 }

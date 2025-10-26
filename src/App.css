@@ -4,3 +4,118 @@
   min-height: 100vh;
   background-color: #ffffff;
 }
+
+/* Persona 5 inspired UI elements (desktop use) */
+.p5-unskew {
+  display: inline-block;
+  transform: skewX(12deg) rotate(2deg);
+}
+
+.p5-badge {
+  position: relative;
+  display: inline-block;
+  padding: 10px 18px;
+  background: #e60012; /* P5 red */
+  color: #000000;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  transform: skewX(-12deg) rotate(-2deg);
+  box-shadow: 0 6px 0 #000, 0 10px 20px rgba(0,0,0,0.35);
+  user-select: none;
+}
+.p5-badge::before {
+  content: "";
+  position: absolute;
+  inset: -8px;
+  background: #000;
+  z-index: -2;
+  transform: translate(2px, 2px);
+}
+.p5-badge::after {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  background: #fff;
+  z-index: -1;
+}
+
+.p5-button {
+  position: relative;
+  display: inline-block;
+  padding: 12px 22px;
+  background: #e60012;
+  color: #000;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  /* Base transforms via CSS variables so JS can randomize per-hover */
+  --p5-skew-base: -12deg;
+  --p5-rot-base: -2deg;
+  --p5-skew-delta: 0deg;
+  --p5-rot-delta: 0deg;
+  --p5-scale: 1;
+  --p5-tx: 0px;
+  --p5-ty: 0px;
+  transform: translate(var(--p5-tx), var(--p5-ty))
+             skewX(calc(var(--p5-skew-base) + var(--p5-skew-delta)))
+             rotate(calc(var(--p5-rot-base) + var(--p5-rot-delta)))
+             scale(var(--p5-scale));
+  transition: transform 180ms cubic-bezier(.2,.9,.2,1), filter 180ms ease;
+  filter: drop-shadow(0 6px 0 #000) drop-shadow(0 12px 18px rgba(0,0,0,0.35));
+}
+.p5-button::before {
+  content: "";
+  position: absolute;
+  inset: -8px;
+  background: #000;
+  z-index: -2;
+  transform: translate(2px, 2px);
+}
+.p5-button::after {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  background: #fff;
+  z-index: -1;
+}
+.p5-button:hover {
+  /* Fallback pop if JS doesn't set vars */
+  --p5-scale: 1.12; /* emphasize more */
+  --p5-tx: 4px;
+  filter: drop-shadow(0 12px 0 #000) drop-shadow(0 18px 26px rgba(0,0,0,0.5));
+}
+.p5-button:active {
+  transform: skewX(-12deg) rotate(-2deg) translateY(2px);
+  filter: drop-shadow(0 4px 0 #000) drop-shadow(0 8px 14px rgba(0,0,0,0.35));
+}
+.p5-button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px #fff, 0 0 0 6px #000;
+}
+.p5-button__label {
+  display: inline-block;
+  /* Cancel container transforms so text stays legible */
+  transform: skewX(var(--p5-label-skew, 12deg)) rotate(var(--p5-label-rot, 2deg));
+}
+
+/* Optional compact variant */
+.p5-button--sm {
+  padding: 8px 16px;
+}
+
+/* Slide-in from left for P5 menu elements */
+@keyframes p5-sweep-in {
+  from {
+    transform: translateX(-64px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+.p5-slide-in {
+  animation: p5-sweep-in 520ms cubic-bezier(.2,.9,.2,1) both;
+  will-change: transform, opacity;
+}
