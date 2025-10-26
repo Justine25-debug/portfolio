@@ -1,12 +1,11 @@
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 
-// Preload the Darkness GLTF and its dependent assets at app startup
-// so navigation to the Projects route feels instant.
+// Preload Darkness GLTF + assets for faster first render.
 const files = import.meta.glob('../assets/darkness/**/*', { as: 'url', eager: true }) as Record<string, string>
 const baseKey = '../assets/darkness/'
 const toUrl = (rel: string) => files[baseKey + rel] ?? rel
 
-// Manually preload using GLTFLoader with the same URL rewrite logic used in runtime
+// GLTFLoader with URL rewrite to emitted asset URLs.
 try {
 	const mapDependentUrl = (raw: string) => {
 		try {
@@ -27,8 +26,8 @@ try {
 
 	const loader = new GLTFLoader()
 	loader.manager.setURLModifier((url) => mapDependentUrl(url))
-	// Fire and forget the preload; ignore errors to avoid blocking app startup
+	// Best-effort preload; ignore errors.
 	loader.load(toUrl('scene.gltf'), () => {}, undefined, () => {})
 } catch {
-	// Non-fatal: if preloading fails for any reason, runtime load will still attempt
+	// Ignore preload errors.
 }

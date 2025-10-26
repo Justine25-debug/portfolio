@@ -1,3 +1,10 @@
+/*
+  Projects section
+  - Renders a Three.js scene (GLTF "darkness" model) inside a React Three Fiber Canvas
+  - Provides intro and preset camera moves (desktop/mobile)
+  - Shows a responsive project menu with playful hover effects
+  Notes: Comments are intentionally brief and non-invasive; no runtime behavior changes.
+*/
 import React, { useMemo, useEffect, useState, useRef, useCallback } from 'react'
 import { Canvas, useLoader, useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
@@ -8,85 +15,23 @@ type ProjectsProps = {
   isDark?: boolean
 }
 
-// Simple, non-auto-scrolling chips carousel
-function ChipsCarousel({ items, isDark = false, onSelect }: { items: string[]; isDark?: boolean; onSelect?: (index: number, label: string) => void }) {
-  // Start with no selection by default
-  const [index, setIndex] = useState<number>(-1)
-  const trackRef = useRef<HTMLDivElement | null>(null)
-
-  const scrollIntoView = (i: number) => {
-    const root = trackRef.current
-    if (!root) return
-    const chips = root.querySelectorAll<HTMLButtonElement>('[data-chip="true"]')
-    const chip = chips[i]
-    if (!chip) return
-    const start = root.scrollLeft
-    const end = chip.offsetLeft - 16 // small leading padding
-    const chipEnd = chip.offsetLeft + chip.offsetWidth
-    const viewEnd = root.scrollLeft + root.clientWidth
-    // Only adjust if outside the viewport for a calm UX
-    let target = start
-    if (chip.offsetLeft < start) target = end
-    else if (chipEnd > viewEnd) target = chipEnd - root.clientWidth + 16
-    if (target !== start) {
-      root.scrollTo({ left: target, behavior: 'smooth' })
-    }
-    setIndex(i)
-  }
-
-  const chipBase = isDark
-    ? 'bg-white/5 text-white border-white/10 hover:bg-white/10'
-    : 'bg-black/5 text-black border-black/10 hover:bg-black/10'
-  const chipActive = isDark ? 'bg-white/20' : 'bg-black/10'
-
-  return (
-    <div className="w-full">
-      <div className="flex items-center gap-3">
-        <div
-          ref={trackRef}
-          className="flex-1 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none]"
-          style={{ scrollbarWidth: 'none' }}
-        >
-          {/* Hide WebKit scrollbars */}
-          <style>{`.hide-scrollbar::-webkit-scrollbar{display:none}`}</style>
-          <div className="flex gap-3 pr-2 hide-scrollbar justify-center w-max mx-auto">
-            {items.map((label, i) => (
-              <button
-                key={label}
-                data-chip="true"
-                onClick={() => {
-                  scrollIntoView(i)
-                  onSelect?.(i, label)
-                }}
-                className={`whitespace-nowrap px-4 py-2 rounded-full border transition-colors ${chipBase} ${i === index ? chipActive : ''}`}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-}
-
+// Loads the GLTF scene and remaps internal resource URLs to Vite-emitted asset URLs
+// so textures/bin files referenced by the GLTF resolve correctly in production.
 function DarknessModel({ onLoaded }: { onLoaded?: () => void }) {
-  // Eagerly load and map all files in the darkness folder so production build includes them
+  // Eagerly import all assets under assets/darkness as URLs
   const files = useMemo(
     () => (import.meta.glob('../../assets/darkness/**/*', { as: 'url', eager: true }) as Record<string, string>),
     []
   )
 
-  // Base path key prefix used in the glob map
   const baseKey = '../../assets/darkness/'
 
-  // Resolve the emitted URL for a given relative path inside the darkness folder
+  // Helper to map a relative path used by the GLTF to its final URL from Vite
   const toUrl = (rel: string) => files[baseKey + rel] ?? rel
 
-  // Configure GLTFLoader to rewrite dependent URLs (scene.bin, textures/*.png) to their emitted URLs
+  // Load GLTF and intercept URL requests for dependent resources (bin/textures)
   const gltf = useLoader(GLTFLoader, toUrl('scene.gltf'), (loader) => {
     const mapDependentUrl = (raw: string) => {
-      // Try to normalize to a pathname and match the tail we care about
       try {
         const u = new URL(raw, typeof window !== 'undefined' ? window.location.origin : 'http://localhost')
         const path = u.pathname.replace(/\\/g, '/')
@@ -96,7 +41,6 @@ function DarknessModel({ onLoaded }: { onLoaded?: () => void }) {
           if (mapped) return mapped
         }
       } catch {
-        // raw could be relative like 'scene.bin' or 'textures/foo.png'
         const rel = raw.replace(/^\.?\//, '')
         const mapped = toUrl(rel)
         if (mapped) return mapped
@@ -107,13 +51,13 @@ function DarknessModel({ onLoaded }: { onLoaded?: () => void }) {
     loader.manager.setURLModifier((url) => mapDependentUrl(url))
   })
 
-  // Improve texture clarity at oblique angles (e.g., ground/grass) with anisotropic filtering
   const { gl } = useThree()
   const isTexture = (v: unknown): v is THREE.Texture => v instanceof THREE.Texture
+  // Post-process materials/textures for quality and correctness (anisotropy, color space, grass tweaks)
   useEffect(() => {
     if (!gltf?.scene || !gl) return
     const maxAniso = gl.capabilities.getMaxAnisotropy()
-    const targetAniso = Math.min(8, maxAniso) // 8 is a good quality/perf balance; increase to maxAniso if desired
+    const targetAniso = Math.min(8, maxAniso)
     gltf.scene.traverse((obj) => {
       if ((obj as THREE.Mesh).isMesh) {
         const mesh = obj as THREE.Mesh
@@ -123,19 +67,16 @@ function DarknessModel({ onLoaded }: { onLoaded?: () => void }) {
         type TextureCarrier = THREE.Material & Partial<Record<'map' | 'aoMap' | 'emissiveMap' | 'metalnessMap' | 'roughnessMap' | 'normalMap' | 'specularMap', THREE.Texture>>
         const keys: Array<keyof TextureCarrier> = ['map', 'aoMap', 'emissiveMap', 'metalnessMap', 'roughnessMap', 'normalMap', 'specularMap']
         materials.forEach((m) => {
-          // Ensure visibility from both sides as requested
           m.side = THREE.FrontSide
           ;(m as THREE.Material & { needsUpdate?: boolean }).needsUpdate = true
-          // Make grass cards visible from all angles and stable with cutout alpha
           const isGrassMat = !!(m.name && m.name.toLowerCase().includes('grass'))
           if (isGrassMat) {
+            // Two-sided with alpha-correct settings for cutout-like grass
             m.side = THREE.DoubleSide
-            // Use cutout to avoid sorting artifacts and halos
             const ms = m as THREE.MeshStandardMaterial & { alphaToCoverage?: boolean }
             ms.alphaTest = Math.max(0.0, Math.min(0.5, ms.alphaTest || 0.45))
             ms.transparent = false
             ms.depthWrite = true
-            // Reduce jaggies on masked edges when MSAA is available
             ms.alphaToCoverage = true
             m.needsUpdate = true
           }
@@ -143,23 +84,16 @@ function DarknessModel({ onLoaded }: { onLoaded?: () => void }) {
           keys.forEach((key) => {
             const tex = mc[key]
             if (isTexture(tex) && tex.anisotropy !== targetAniso) {
-              // Ensure correct color space for base color textures
               if (key === 'map') {
                 tex.colorSpace = THREE.SRGBColorSpace
               }
-
-              // General improvements
               tex.anisotropy = targetAniso
-
-              // Wrapping: prefer repeat for tiled surfaces, clamp for alpha-cutout cards
               if (isGrassMat) {
                 tex.wrapS = THREE.ClampToEdgeWrapping
                 tex.wrapT = THREE.ClampToEdgeWrapping
-                // Avoid mipmap bleeding on masked textures
                 tex.generateMipmaps = false
                 tex.minFilter = THREE.LinearFilter
                 tex.magFilter = THREE.LinearFilter
-                // Premultiply helps remove dark/bright fringes around alpha
                 tex.premultiplyAlpha = true
               } else {
                 tex.wrapS = THREE.RepeatWrapping
@@ -171,12 +105,11 @@ function DarknessModel({ onLoaded }: { onLoaded?: () => void }) {
         })
       }
     })
-    // Signal that model and textures are processed and ready to show
     onLoaded?.()
   }, [gltf.scene, gl, onLoaded])
 
-  // Auto-center and scale to a reasonable size
   const groupRef = React.useRef<THREE.Group>(null!)
+  // Fit the model to a target size (compute bounding box and scale/center)
   const { center, scale } = useMemo(() => {
     const box = new THREE.Box3().setFromObject(gltf.scene)
     const size = new THREE.Vector3()
@@ -190,10 +123,8 @@ function DarknessModel({ onLoaded }: { onLoaded?: () => void }) {
 
   const cloned = useMemo(() => gltf.scene.clone(true), [gltf.scene])
 
-  // Fix a pleasant static orientation
   useEffect(() => {
     if (!groupRef.current) return
-    // Keep only a gentle yaw; remove pitch/roll so it's not slanted
     groupRef.current.rotation.set(0, 0.9, 0)
   }, [])
 
@@ -218,15 +149,14 @@ function CameraControls({ enabled, onUpdate }: { enabled: boolean; onUpdate: (c:
 
   useEffect(() => {
     if (!enabled) return
+    // Attach OrbitControls to the document body for full-screen interaction
     const el = document.body as HTMLElement
   const controls = new ThreeOrbitControls(camera, el)
     controls.enableDamping = true
     controls.dampingFactor = 0.05
     controls.rotateSpeed = 0.6
   controls.zoomSpeed = 0.8
-  // Make panning quick as requested
   controls.panSpeed = 2.6
-  // Align target with desired look-at
   controls.target.set(-0.07, -0.07, 0)
     controls.addEventListener('change', () => {
       const persp = camera as THREE.PerspectiveCamera
@@ -252,12 +182,12 @@ function CameraControls({ enabled, onUpdate }: { enabled: boolean; onUpdate: (c:
 
 type Vec3 = { x: number; y: number; z: number }
 
+// One-off intro camera animation from a start to an end position
 function CameraIntroMove({ from, to, target, duration = 1.6 }: { from: Vec3; to: Vec3; target: Vec3; duration?: number }) {
   const { camera } = useThree()
   useEffect(() => {
     const start = new THREE.Vector3(from.x, from.y, from.z)
     const end = new THREE.Vector3(to.x, to.y, to.z)
-    // Initialize at the starting position
     camera.position.set(start.x, start.y, start.z)
     camera.lookAt(target.x, target.y, target.z)
     camera.updateProjectionMatrix()
@@ -283,17 +213,16 @@ function CameraIntroMove({ from, to, target, duration = 1.6 }: { from: Vec3; to:
   return null
 }
 
+// Generic tweened camera move (re-runs when "trigger" changes)
 function CameraMoveTo({ to, target, fov = 50, duration = 1.2, trigger = 0, onUpdate }: { to: Vec3; target: Vec3; fov?: number; duration?: number; trigger?: number; onUpdate?: (c: CameraUpdate) => void }) {
   const { camera } = useThree()
   useEffect(() => {
-    // Capture starting state
     const startPos = new THREE.Vector3(camera.position.x, camera.position.y, camera.position.z)
     const endPos = new THREE.Vector3(to.x, to.y, to.z)
     const persp = camera as THREE.PerspectiveCamera
     const startFov = persp.fov
     const endFov = fov
 
-    // Approximate current look-at by projecting forward to the distance of the final target
     const dir = new THREE.Vector3()
     camera.getWorldDirection(dir)
     const finalTarget = new THREE.Vector3(target.x, target.y, target.z)
@@ -305,12 +234,9 @@ function CameraMoveTo({ to, target, fov = 50, duration = 1.2, trigger = 0, onUpd
     const step = (now: number) => {
       const t = Math.min(1, (now - startTime) / (duration * 1000))
       const k = easeInOutCubic(t)
-      // Position
       camera.position.lerpVectors(startPos, endPos, k)
-      // Target
       const curTarget = new THREE.Vector3().lerpVectors(startTarget, finalTarget, k)
       camera.lookAt(curTarget.x, curTarget.y, curTarget.z)
-      // FOV
       persp.fov = THREE.MathUtils.lerp(startFov, endFov, k)
       camera.updateProjectionMatrix()
 
@@ -333,16 +259,19 @@ function CameraMoveTo({ to, target, fov = 50, duration = 1.2, trigger = 0, onUpd
 }
 
 const Projects: React.FC<ProjectsProps> = ({ isDark = false }) => {
-  // Responsive: detect mobile viewport (<= 640px)
+  // Track responsive layout (mobile breakpoint ~640px)
   const getIsMobile = () => (typeof window !== 'undefined' ? window.matchMedia('(max-width: 640px)').matches : false)
   const [isMobile, setIsMobile] = useState<boolean>(getIsMobile())
+  // Mobile menu UI state
+  const [mobileExpanded, setMobileExpanded] = useState<boolean>(true)
+  const [mobileMenuVisible, setMobileMenuVisible] = useState<boolean>(true)
+  const [mobileClosing, setMobileClosing] = useState<boolean>(false)
+  const closeTimerRef = useRef<number | undefined>(undefined)
   useEffect(() => {
     if (typeof window === 'undefined') return
     const mql = window.matchMedia('(max-width: 640px)')
     const handler = (e: MediaQueryListEvent | MediaQueryList) => setIsMobile('matches' in e ? e.matches : (e as MediaQueryList).matches)
-    // Initial sync in case something changed before effect
     setIsMobile(mql.matches)
-    // Add listener (support older browsers)
     if ('addEventListener' in mql) {
       mql.addEventListener('change', handler as (e: MediaQueryListEvent) => void)
     } else {
@@ -359,7 +288,7 @@ const Projects: React.FC<ProjectsProps> = ({ isDark = false }) => {
     }
   }, [])
 
-  // Camera presets
+  // Default camera positions and target
   const START_POS = useMemo(() => ({ x: -2.9, y: 1.01, z: 3.5 }), [])
   const TARGET = useMemo(() => ({ x: -0.07, y: -0.07, z: 0 }), [])
   const END_DESKTOP = useMemo(() => ({ x: -0.90, y: 0.35, z: 1.01 }), [])
@@ -368,23 +297,20 @@ const Projects: React.FC<ProjectsProps> = ({ isDark = false }) => {
 
   const [controlsEnabled] = useState(false)
   const [isModelReady, setIsModelReady] = useState(false)
-  // Removed debug coordinates state to avoid unused vars after removing overlay UI
 
-  // Desktop-only: trigger camera move when selecting Project 1
   const [moveTrigger, setMoveTrigger] = useState(0)
   const [pendingMove, setPendingMove] = useState<{ to: Vec3; target: Vec3; fov: number } | null>(null)
 
-  // Inactivity: return camera to default end pose after a period without clicks
   const resetTimerRef = useRef<number | undefined>(undefined)
+  // After a selection, schedule a gentle return to the default framing
   const scheduleReset = useCallback(() => {
     if (resetTimerRef.current) window.clearTimeout(resetTimerRef.current)
     resetTimerRef.current = window.setTimeout(() => {
-      // Use current viewport to decide the end pose at the time of reset
       const mobileNow = getIsMobile()
       const to = mobileNow ? END_MOBILE : END_DESKTOP
       setPendingMove({ to, target: TARGET, fov: 50 })
       setMoveTrigger((n) => n + 1)
-    }, 6000) // 6s of inactivity
+    }, 10000) 
   }, [END_DESKTOP, END_MOBILE, TARGET])
 
   useEffect(() => {
@@ -393,6 +319,7 @@ const Projects: React.FC<ProjectsProps> = ({ isDark = false }) => {
     }
   }, [])
 
+  // Menu items (labels only; wiring to real projects can be added later)
   const PROJECT_LABELS = useMemo(
     () => [
       'Project 1',
@@ -407,32 +334,53 @@ const Projects: React.FC<ProjectsProps> = ({ isDark = false }) => {
     []
   )
 
-  // Mobile-specific camera presets provided
+  // Toggle mobile menu with staggered slide-in/out animation
+  const handleToggleMobileMenu = useCallback(() => {
+    if (closeTimerRef.current) {
+      window.clearTimeout(closeTimerRef.current)
+      closeTimerRef.current = undefined
+    }
+
+    if (mobileExpanded) {
+      setMobileExpanded(false)
+      setMobileClosing(true)
+      setMobileMenuVisible(true)
+      const count = PROJECT_LABELS.length
+      const animMs = 520 
+      const baseDelayMs = 60 
+      const stepDelayMs = 50 
+      const maxDelay = baseDelayMs + (count > 0 ? (count - 1) * stepDelayMs : 0)
+      const totalMs = animMs + maxDelay + 40 
+      closeTimerRef.current = window.setTimeout(() => {
+        setMobileMenuVisible(false)
+        setMobileClosing(false)
+        closeTimerRef.current = undefined
+      }, totalMs)
+    } else {
+      setMobileMenuVisible(true)
+      setMobileClosing(false)
+      setMobileExpanded(true)
+    }
+  }, [mobileExpanded, PROJECT_LABELS.length])
+
+  // Camera presets for mobile (tighter framing, same target)
   const MOBILE_PRESETS: Array<{ to: Vec3; target: Vec3; fov: number }> = useMemo(
     () => [
-      // Project 1
       { to: { x: -0.22, y: 0.10, z: 0.51 }, target: { x: -0.45, y: 0.02, z: 0.32 }, fov: 50 },
-      // Project 2
       { to: { x: 0.01, y: 0.10, z: 0.24 }, target: { x: -0.22, y: 0.02, z: 0.05 }, fov: 50 },
-      // Project 3
       { to: { x: 0.23, y: 0.10, z: -0.04 }, target: { x: 0.01, y: 0.02, z: -0.22 }, fov: 50 },
-      // Project 4
       { to: { x: 0.46, y: 0.10, z: -0.33 }, target: { x: 0.24, y: 0.02, z: -0.50 }, fov: 50 },
-      // Project 5
       { to: { x: 0.74, y: 0.10, z: -0.69 }, target: { x: 0.52, y: 0.03, z: -0.86 }, fov: 50 },
-      // Project 6
       { to: { x: 0.96, y: 0.10, z: -0.97 }, target: { x: 0.74, y: 0.03, z: -1.14 }, fov: 50 },
-      // Project 7
       { to: { x: 1.18, y: 0.10, z: -1.25 }, target: { x: 0.96, y: 0.03, z: -1.42 }, fov: 50 },
-      // Project 8
       { to: { x: 1.40, y: 0.10, z: -1.54 }, target: { x: 1.18, y: 0.03, z: -1.71 }, fov: 50 }
     ],
     []
   )
 
+  // Handle project selection -> move camera to preset; auto-reset after a delay
   const handleSelect = useCallback(
     (i: number) => {
-      // Animate camera to specific viewpoints per project
       if (isMobile) {
         const p = MOBILE_PRESETS[i]
         if (p) {
@@ -504,16 +452,15 @@ const Projects: React.FC<ProjectsProps> = ({ isDark = false }) => {
     [MOBILE_PRESETS, isMobile, scheduleReset]
   )
 
-  // Local P5 button component to randomize slant on hover
+  // Project button with lighthearted neon hover transforms controlled via CSS variables
   const P5Button: React.FC<{ label: string; onClick: () => void }> = ({ label, onClick }) => {
     const [styleVars, setStyleVars] = useState<Record<string, string | number>>({})
 
   const onEnter = () => {
-      // Randomize deltas for a playful Persona 5 feel
       const randSign = () => (Math.random() < 0.5 ? -1 : 1)
       const rotDelta = (Math.random() * 6 + 3) * randSign() // 3..9 deg
       const skewDelta = (Math.random() * 6 + 4) * randSign() // 4..10 deg
-  const scale = 1.20 + Math.random() * 0.04 // 1.12..1.16 emphasize more
+  const scale = 1.20 + Math.random() * 0.04
       const tx = `${(Math.random() < 0.5 ? -1 : 1) * 4}px`
 
       const newVars: Record<string, string | number> = {
@@ -522,7 +469,6 @@ const Projects: React.FC<ProjectsProps> = ({ isDark = false }) => {
         ['--p5-scale']: scale,
         ['--p5-tx']: tx,
         ['--p5-ty']: '0px',
-        // Cancel both base and delta on the label to keep text readable
         ['--p5-label-rot']: `${2 - rotDelta}deg`,
         ['--p5-label-skew']: `${12 - skewDelta}deg`,
       }
@@ -551,37 +497,31 @@ const Projects: React.FC<ProjectsProps> = ({ isDark = false }) => {
     )
   }
 
-  // (No-op) Previously kept debug coords in sync with responsive end position
-
-  // Coordinates string (was shown in debug panel); kept logic but not rendered to avoid vignette overlay
-
 
   return (
     <section
       id="projects"
   className={`relative w-full overflow-hidden min-h-[100dvh] ${isDark ? 'bg-black text-white' : 'bg-white text-black'}`}
     >
-      {/* Background 3D Canvas */}
+      {/* 3D scene background (fades in when model is ready) */}
       <div className={`absolute inset-0 z-0 pointer-events-none transition-opacity duration-1000 ${isModelReady ? 'opacity-100' : 'opacity-0'}`}>
         <Canvas
           camera={{ position: [-2.9, 1.01, 3.5], fov: 50, near: 0.01, far: 100 }}
           dpr={[1, 2]}
           gl={{ antialias: true }}
         >
-          {/* Match canvas background to theme to avoid black in light mode */}
           <color attach="background" args={[isDark ? '#000000' : '#ffffff']} />
-          {/* Softer lighting for background */}
           <ambientLight intensity={0.7} />
           <directionalLight position={[3, 4, 5]} intensity={0.9} />
           <directionalLight position={[-3, -2, -4]} intensity={0.25} />
           <React.Suspense fallback={null}>
             <DarknessModel onLoaded={() => setIsModelReady(true)} />
-            {/* Second copy behind the original, nudged forward to close the seam */}
+            {/* A second instance of the model for depth/parallax composition */}
             <group position={[0.95, 0, -1.2]}>
               <DarknessModel />
             </group>
           </React.Suspense>
-          {/* Intro camera move from start to end while looking at the requested target */}
+          {/* Intro and preset camera motion */}
           <CameraIntroMove
             key={isMobile ? 'mobile' : 'desktop'}
             from={{ x: START_POS.x, y: START_POS.y, z: START_POS.z }}
@@ -602,7 +542,7 @@ const Projects: React.FC<ProjectsProps> = ({ isDark = false }) => {
         </Canvas>
       </div>
 
-      {/* Desktop: left-side Persona 5 style menu */}
+      {/* Desktop sidebar menu */}
       {!isMobile && (
         <aside className="absolute left-0 top-0 h-full z-20 flex items-center pointer-events-auto">
           <div className="ml-6 md:ml-10 space-y-5 select-none">
@@ -623,18 +563,44 @@ const Projects: React.FC<ProjectsProps> = ({ isDark = false }) => {
       )}
       {!isMobile && <h2 className="sr-only">Projects</h2>}
 
-      {/* Mobile: keep existing heading and chips */}
+      {/* Mobile bottom-left menu with collapsible list */}
       {isMobile && (
-        <div className="relative z-20 max-w-6xl mx-auto px-6 py-20 md:py-28">
-          <h2 className="text-3xl md:text-4xl font-semibold tracking-tight mb-6">Projects</h2>
-          <div className="mt-8">
-            <ChipsCarousel
-              isDark={isDark}
-              items={PROJECT_LABELS}
-              onSelect={handleSelect}
-            />
+        <aside className="absolute left-0 bottom-20 z-20 pointer-events-auto">
+          <div className="ml-4 mb-6 space-y-3 select-none">
+            {mobileMenuVisible && (
+              <nav
+                id="mobile-projects-nav"
+                aria-label="Projects menu (mobile)"
+                className="flex flex-col gap-3"
+              >
+                {PROJECT_LABELS.slice().reverse().map((label, idx) => {
+                  const i = PROJECT_LABELS.length - 1 - idx
+                  const total = PROJECT_LABELS.length
+                  const delay = mobileClosing
+                    ? 0.06 + (total - 1 - idx) * 0.05
+                    : 0.06 + idx * 0.05
+                  const cls = mobileClosing ? 'p5-slide-out' : 'p5-slide-in'
+                  return (
+                    <div key={label} className={cls} style={{ animationDelay: `${delay}s` }}>
+                      <P5Button label={label} onClick={() => handleSelect(i)} />
+                    </div>
+                  )
+                })}
+              </nav>
+            )}
+            <div className="p5-slide-in" style={{ animationDelay: `${0.06 + PROJECT_LABELS.length * 0.05}s` }}>
+              <button
+                type="button"
+                className="p5-badge"
+                aria-controls="mobile-projects-nav"
+                aria-expanded={mobileExpanded}
+                onClick={handleToggleMobileMenu}
+              >
+                <span className="p5-unskew">Projects</span>
+              </button>
+            </div>
           </div>
-        </div>
+        </aside>
       )}
 
       {/* Controls toggle and coordinates */}
