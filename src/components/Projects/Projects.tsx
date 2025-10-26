@@ -263,10 +263,12 @@ const Projects: React.FC<ProjectsProps> = ({ isDark = false }) => {
   const getIsMobile = () => (typeof window !== 'undefined' ? window.matchMedia('(max-width: 640px)').matches : false)
   const [isMobile, setIsMobile] = useState<boolean>(getIsMobile())
   // Mobile menu UI state
-  const [mobileExpanded, setMobileExpanded] = useState<boolean>(true)
-  const [mobileMenuVisible, setMobileMenuVisible] = useState<boolean>(true)
+  // Start closed on mobile (visible on desktop where this state is unused)
+  const [mobileExpanded, setMobileExpanded] = useState<boolean>(!getIsMobile())
+  const [mobileMenuVisible, setMobileMenuVisible] = useState<boolean>(!getIsMobile())
   const [mobileClosing, setMobileClosing] = useState<boolean>(false)
   const closeTimerRef = useRef<number | undefined>(undefined)
+  const openTimerRef = useRef<number | undefined>(undefined)
   useEffect(() => {
     if (typeof window === 'undefined') return
     const mql = window.matchMedia('(max-width: 640px)')
@@ -287,6 +289,41 @@ const Projects: React.FC<ProjectsProps> = ({ isDark = false }) => {
       }
     }
   }, [])
+
+  // Ensure the mobile menu starts closed and auto-opens after 3s when on mobile
+  useEffect(() => {
+    // Clear any pending timers
+    if (openTimerRef.current) {
+      window.clearTimeout(openTimerRef.current)
+      openTimerRef.current = undefined
+    }
+    if (closeTimerRef.current) {
+      window.clearTimeout(closeTimerRef.current)
+      closeTimerRef.current = undefined
+    }
+
+    if (isMobile) {
+      // Immediately set to closed state (no list rendered)
+      setMobileExpanded(false)
+      setMobileMenuVisible(false)
+      setMobileClosing(false)
+
+      // Auto-open after 3 seconds with slide-in animation
+      openTimerRef.current = window.setTimeout(() => {
+        setMobileMenuVisible(true)
+        setMobileClosing(false)
+        setMobileExpanded(true)
+        openTimerRef.current = undefined
+      }, 3000)
+    }
+
+    return () => {
+      if (openTimerRef.current) {
+        window.clearTimeout(openTimerRef.current)
+        openTimerRef.current = undefined
+      }
+    }
+  }, [isMobile])
 
   // Default camera positions and target
   const START_POS = useMemo(() => ({ x: -2.9, y: 1.01, z: 3.5 }), [])
@@ -310,7 +347,7 @@ const Projects: React.FC<ProjectsProps> = ({ isDark = false }) => {
       const to = mobileNow ? END_MOBILE : END_DESKTOP
       setPendingMove({ to, target: TARGET, fov: 50 })
       setMoveTrigger((n) => n + 1)
-    }, 10000) 
+    }, 15000) 
   }, [END_DESKTOP, END_MOBILE, TARGET])
 
   useEffect(() => {
@@ -339,6 +376,10 @@ const Projects: React.FC<ProjectsProps> = ({ isDark = false }) => {
     if (closeTimerRef.current) {
       window.clearTimeout(closeTimerRef.current)
       closeTimerRef.current = undefined
+    }
+    if (openTimerRef.current) {
+      window.clearTimeout(openTimerRef.current)
+      openTimerRef.current = undefined
     }
 
     if (mobileExpanded) {
